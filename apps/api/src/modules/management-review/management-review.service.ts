@@ -9,6 +9,7 @@ export { InvalidTransitionError };
 export interface SubmitManagementReviewInput {
   encounterId: string;
   managementUserId: string;
+  patientEmail?: string;
   caregiverAvailable?: boolean;
   insuranceStatus: string;
   billingStatus: string;
@@ -27,6 +28,13 @@ export async function submitManagementReview(input: SubmitManagementReviewInput)
   const transition = applyManagementDecision(encounter.overallStatus as any, input.managementStatus, input.failureTag);
 
   const review = await prisma.$transaction(async (tx) => {
+    if (input.patientEmail) {
+      await tx.patient.update({
+        where: { id: encounter.patientId },
+        data: { email: input.patientEmail },
+      });
+    }
+
     const review = await tx.managementReview.upsert({
       where: { encounterId: input.encounterId },
       create: {

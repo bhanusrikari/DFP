@@ -16,10 +16,15 @@ export const env = {
   aiProvider: (process.env.AI_PROVIDER ?? "mock") as "mock" | "claude",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
 
-  reminderProvider: (process.env.REMINDER_PROVIDER ?? "console") as "console" | "twilio",
+  reminderProvider: (process.env.REMINDER_PROVIDER ?? "console") as "console" | "twilio" | "resend",
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
   twilioWhatsappFrom: process.env.TWILIO_WHATSAPP_FROM ?? "",
+  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  smtpHost: process.env.SMTP_HOST ?? "",
+  smtpPort: Number(process.env.SMTP_PORT ?? 587),
+  smtpUser: process.env.SMTP_USER ?? "",
+  smtpPass: process.env.SMTP_PASS ?? "",
 
   demoTimeAcceleration: Number(process.env.DEMO_TIME_ACCELERATION ?? 1),
 };

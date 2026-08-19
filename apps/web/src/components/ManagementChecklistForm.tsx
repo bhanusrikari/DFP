@@ -25,15 +25,19 @@ export function ManagementChecklistForm({
   const [billingStatus, setBillingStatus] = useState("PENDING");
   const [documentsStatus, setDocumentsStatus] = useState("INCOMPLETE");
   const [otherNotes, setOtherNotes] = useState("");
+  const [patientEmail, setPatientEmail] = useState("");
   const [failureTag, setFailureTag] = useState<string>(FailureTag.OTHER_ADMINISTRATIVE_ISSUE);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   async function submit(managementStatus: string) {
     setSubmitting(true);
     setError(null);
+    setSuccess(false);
     try {
       await api.post(`/api/encounters/${encounterId}/management-review`, {
+        patientEmail: patientEmail || undefined,
         caregiverAvailable: caregiverRequired ? caregiverAvailable : undefined,
         insuranceStatus,
         billingStatus,
@@ -42,7 +46,12 @@ export function ManagementChecklistForm({
         managementStatus,
         failureTag: managementStatus === ManagementStatus.FAILED ? failureTag : undefined,
       });
-      onSubmitted();
+      if (managementStatus === ManagementStatus.APPROVED) {
+        setSuccess(true);
+        setTimeout(() => onSubmitted(), 2500);
+      } else {
+        onSubmitted();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit review");
     } finally {
@@ -59,6 +68,17 @@ export function ManagementChecklistForm({
   return (
     <div className="rounded-2xl border border-gray-100 bg-white shadow-card p-4">
       <h3 className="font-display text-lg font-semibold">Operational discharge checklist</h3>
+
+      <div className="mt-3 mb-2">
+        <label className="text-xs font-mono uppercase tracking-wide text-gray-500">Patient Email (For Notifications)</label>
+        <input
+          type="email"
+          className="mt-1 w-full rounded-md border border-gray-300 p-2 text-sm"
+          placeholder="patient@example.com"
+          value={patientEmail}
+          onChange={(e) => setPatientEmail(e.target.value)}
+        />
+      </div>
 
       {caregiverRequired && (
         <ChecklistRow label="Caregiver available">
@@ -101,6 +121,17 @@ export function ManagementChecklistForm({
       )}
 
       {error && <p className="mt-3 text-sm text-critical">{error}</p>}
+      
+      {success && (
+        <div className="mt-3 rounded-md bg-success-soft p-3 border border-success">
+          <p className="text-sm font-medium text-success flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Success! Discharge Approved & Care Plan Sent.
+          </p>
+        </div>
+      )}
 
       <div className="mt-4 flex gap-2">
         <button

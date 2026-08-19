@@ -27,6 +27,23 @@ export async function scheduleRemindersForCarePlan(carePlanId: string): Promise<
     const runAt = new Date(Date.now() + demoDelayMs);
 
     await enqueueJob("SEND_REMINDER", { reminderLogId: reminder.id }, runAt);
+
+    if (item.itemType === "APPOINTMENT") {
+      const advanceDate = new Date(item.scheduledAt.getTime() - 24 * 60 * 60 * 1000);
+      if (advanceDate > carePlan.dischargeDate) {
+        const advReminder = await prisma.reminderLog.create({
+          data: {
+            carePlanItemId: item.id,
+            channel: "WHATSAPP",
+            scheduledAt: advanceDate,
+            status: "SCHEDULED",
+          },
+        });
+        const advDelayMs = Math.max(0, advanceDate.getTime() - carePlan.dischargeDate.getTime());
+        const advDemoDelayMs = Math.max(0, advDelayMs / env.demoTimeAcceleration);
+        await enqueueJob("SEND_REMINDER", { reminderLogId: advReminder.id }, new Date(Date.now() + advDemoDelayMs));
+      }
+    }
   }
 }
 
@@ -43,7 +60,16 @@ export async function dispatchReminder(reminderLogId: string): Promise<void> {
   const provider = getNotificationProvider();
   const result = await provider.send({
     toPhone: patient.contactPhone,
-    message: `Reminder for ${patient.name}: ${reminder.carePlanItem.description} (scheduled ${reminder.scheduledAt.toLocaleString()})`,
+    toEmail: patient.email,
+    message: (() => {
+      if (reminder.carePlanItem.itemType === "DISCHARGE_SUMMARY") {
+        return `Hello ${patient.name}, your Discharge Summary and Care Plan is ready! Please review your schedule: ${reminder.carePlanItem.description}`;
+      }
+      if (reminder.carePlanItem.itemType === "APPOINTMENT") {
+        return `Reminder for ${patient.name}: You have an upcoming ${reminder.carePlanItem.description} at ${reminder.carePlanItem.scheduledAt.toLocaleString()}`;
+      }
+      return `Reminder for ${patient.name}: ${reminder.carePlanItem.description} (scheduled ${reminder.scheduledAt.toLocaleString()})`;
+    })(),
   });
 
   await prisma.reminderLog.update({

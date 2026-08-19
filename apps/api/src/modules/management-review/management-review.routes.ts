@@ -5,6 +5,7 @@ import { requireRole } from "../../auth/rbac.middleware.js";
 import { InvalidTransitionError, submitManagementReview } from "./management-review.service.js";
 
 const submitSchema = z.object({
+  patientEmail: z.string().email().optional().or(z.literal("")),
   caregiverAvailable: z.boolean().optional(),
   insuranceStatus: z.string().min(1),
   billingStatus: z.string().min(1),

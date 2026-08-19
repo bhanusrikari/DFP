@@ -39,7 +39,12 @@ export async function generateCarePlan(encounterId: string): Promise<void> {
   });
 
   // Regenerating (e.g. re-run) starts from a clean item list.
-  await prisma.carePlanItem.deleteMany({ where: { carePlanId: carePlan.id } });
+  const oldItems = await prisma.carePlanItem.findMany({ where: { carePlanId: carePlan.id }, select: { id: true } });
+  if (oldItems.length > 0) {
+    const ids = oldItems.map(i => i.id);
+    await prisma.reminderLog.deleteMany({ where: { carePlanItemId: { in: ids } } });
+    await prisma.carePlanItem.deleteMany({ where: { carePlanId: carePlan.id } });
+  }
 
   const items: { itemType: string; sourceRef: string; scheduledAt: Date; description: string }[] = [];
 
