@@ -1,0 +1,13 @@
+{
+  "version": "sklearn-logreg-v1",
+  "trainedOn": "synthetic dataset, n=4000, held-out accuracy=0.671, AUROC=0.655",
+  "bias": -1.3366152316402145,
+  "weights": {
+    "ageNorm": 0.9315220006914728,
+    "lengthOfStayNorm": 0.9610823880650153,
+    "abnormalFindingsNorm": 1.927178540328655,
+    "highSeverityFindingsNorm": 1.7913845570227032,
+    "caregiverRequired": 0.6052661312014713,
+    "priorEncountersNorm": 0.5206818081066801
+  }
+}

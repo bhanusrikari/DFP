@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma *)",
+      "Bash(npm install *)",
+      "Bash(npm audit *)",
+      "Bash(npx tsc *)",
+      "Bash(npx tsx *)",
+      "Bash(npx vite *)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 20428 //F)",
+      "Bash(chromium-cli --help)",
+      "Bash(timeout 20 npx --yes playwright --version)",
+      "Bash(npx playwright *)",
+      "Bash(node \"C:\\\\Users\\\\BHANU\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Dev-DFP\\\\2a6c51f2-e19b-4d95-a66e-f6ad4d121037\\\\scratchpad\\\\verify-app.mjs\")",
+      "Bash(cp \"C:\\\\Users\\\\BHANU\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Dev-DFP\\\\2a6c51f2-e19b-4d95-a66e-f6ad4d121037\\\\scratchpad\\\\verify-app.mjs\" \"c:\\\\Dev\\\\DFP\\\\_verify-app.mjs\")",
+      "Bash(node _verify-app.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(taskkill //PID 17572 //F)",
+      "Bash(curl -s -m 5 -o /dev/null -w \"web:%{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s -m 5 -o /dev/null -w \"web\\(v6\\):%{http_code}\\\\n\" http://[::1]:5173/)",
+      "Bash(curl -s -m 5 -o /dev/null -w \"web\\(v4\\):%{http_code}\\\\n\" http://127.0.0.1:5173/)",
+      "PowerShell(20808,9468,3456,26108 | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 1; \"killed\")"
+    ]
+  }
+}

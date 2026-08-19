@@ -1,0 +1,216 @@
+// SQLite for local/dev/demo. Swap to PostgreSQL for production:
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")   (a postgres:// connection string)
+// No other model changes are required for that swap except the two Json-as-String
+// fields below, which map naturally onto Postgres's native Json type.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String // Role: DOCTOR | MANAGEMENT | ADMIN
+  createdAt    DateTime @default(now())
+
+  admittedEncounters  Encounter[]               @relation("AdmittingDoctor")
+  uploadedReports     Report[]                  @relation("UploadedBy")
+  medicalDecisions    DischargeDecisionMedical[] @relation("DecidingDoctor")
+  managementReviews   ManagementReview[]        @relation("ReviewingManager")
+  auditEntries        AuditLog[]                @relation("ActorUser")
+}
+
+model Patient {
+  id            String   @id @default(cuid()) // the PRD's "unique patient ID", stable across visits
+  mrn           String?
+  name          String
+  dob           DateTime
+  gender        String
+  contactPhone  String? // primary WhatsApp number
+  contactPhone2 String? // optional second WhatsApp number (e.g. a caregiver's)
+  email         String? // optional — enables email as a second reminder channel
+  createdAt     DateTime @default(now())
+
+  encounters Encounter[]
+}
+
+model Encounter {
+  id               String    @id @default(cuid())
+  patientId        String
+  patient          Patient   @relation(fields: [patientId], references: [id])
+  admissionDate    DateTime  @default(now())
+  dischargeDate    DateTime?
+  ward             String?
+  admittingDoctorId String?
+  admittingDoctor  User?     @relation("AdmittingDoctor", fields: [admittingDoctorId], references: [id])
+
+  overallStatus String  @default("IN_PROGRESS") // OverallStatus
+  failureStage  String? // FailureStage
+  failureTag    String? // FailureTag
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports              Report[]
+  aiAnalyses           AIAnalysis[]
+  medicalDecision      DischargeDecisionMedical?
+  managementReview     ManagementReview?
+  prescriptions        Prescription[]
+  appointments         Appointment[]
+  carePlan             CarePlan?
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  encounterId    String
+  encounter      Encounter @relation(fields: [encounterId], references: [id])
+  type           String // ReportType
+  fileObjectKey  String
+  originalFilename String
+  textContent    String? // free text extracted/entered at upload time (OCR/PDF extraction is a Phase 3 stretch)
+  structuredValuesJson String? // JSON-serialized StructuredLabValue[] for the deterministic rule engine
+  uploadedById   String?
+  uploadedBy     User?    @relation("UploadedBy", fields: [uploadedById], references: [id])
+  status         String   @default("UPLOADED") // ReportStatus
+  createdAt      DateTime @default(now())
+
+  aiAnalysis AIAnalysis?
+}
+
+model AIAnalysis {
+  id                       String   @id @default(cuid())
+  reportId                 String?  @unique
+  report                   Report?  @relation(fields: [reportId], references: [id])
+  encounterId              String
+  encounter                Encounter @relation(fields: [encounterId], references: [id])
+  scope                    String // AIAnalysisScope: PER_REPORT | OVERALL
+  summaryText              String
+  findingsJson             String   // JSON-serialized AIFinding[] (String on SQLite; -> native Json on Postgres)
+  plainLanguageExplanation String
+  modelUsed                String
+  promptVersion            String
+  rawResponse              String?
+  generatedAt              DateTime @default(now())
+}
+
+model DischargeDecisionMedical {
+  id                String   @id @default(cuid())
+  encounterId       String   @unique
+  encounter         Encounter @relation(fields: [encounterId], references: [id])
+  doctorId          String
+  doctor            User     @relation("DecidingDoctor", fields: [doctorId], references: [id])
+  medicalStatus     String // MedicalStatus
+  caregiverRequired Boolean
+  doctorNotes       String?
+  decidedAt         DateTime @default(now())
+}
+
+model Prescription {
+  id            String   @id @default(cuid())
+  encounterId   String
+  encounter     Encounter @relation(fields: [encounterId], references: [id])
+  medicineName  String
+  dosage        String
+  frequency     String
+  route         String?
+  durationDays  Int
+  startDate     DateTime
+  instructions  String?
+}
+
+model Appointment {
+  id            String   @id @default(cuid())
+  encounterId   String
+  encounter     Encounter @relation(fields: [encounterId], references: [id])
+  type          String
+  scheduledDate DateTime
+  provider      String?
+  instructions  String?
+}
+
+model ManagementReview {
+  id                 String   @id @default(cuid())
+  encounterId        String   @unique
+  encounter          Encounter @relation(fields: [encounterId], references: [id])
+  managementUserId   String
+  managementUser     User     @relation("ReviewingManager", fields: [managementUserId], references: [id])
+  caregiverAvailable Boolean?
+  insuranceStatus    String // e.g. CLEARED | PENDING
+  billingStatus      String // e.g. CLEARED | PENDING
+  documentsStatus    String // e.g. COMPLETE | INCOMPLETE
+  otherNotes         String?
+  managementStatus   String   @default("PENDING") // ManagementStatus
+  failureTag         String? // FailureTag
+  reviewedAt         DateTime @default(now())
+}
+
+model CarePlan {
+  id            String   @id @default(cuid())
+  encounterId   String   @unique
+  encounter     Encounter @relation(fields: [encounterId], references: [id])
+  dischargeDate DateTime
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+
+  items CarePlanItem[]
+}
+
+model CarePlanItem {
+  id          String   @id @default(cuid())
+  carePlanId  String
+  carePlan    CarePlan @relation(fields: [carePlanId], references: [id])
+  itemType    String // CarePlanItemType
+  sourceRef   String?
+  scheduledAt DateTime
+  description String
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  reminders ReminderLog[]
+}
+
+model ReminderLog {
+  id                String   @id @default(cuid())
+  carePlanItemId    String
+  carePlanItem      CarePlanItem @relation(fields: [carePlanItemId], references: [id])
+  channel           String // ReminderChannel
+  recipient         String? // the phone number or email address this specific reminder targets
+  scheduledAt       DateTime
+  sentAt            DateTime?
+  status            String   @default("SCHEDULED") // ReminderStatus
+  providerMessageId String?
+  retryCount        Int      @default(0)
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  entityType   String
+  entityId     String
+  action       String
+  actorUserId  String?
+  actor        User?    @relation("ActorUser", fields: [actorUserId], references: [id])
+  actorRole    String?
+  beforeState  String?
+  afterState   String?
+  timestamp    DateTime @default(now())
+}
+
+model Job {
+  id         String   @id @default(cuid())
+  type       String // JobType
+  payload    String  // JSON-serialized payload
+  status     String  @default("PENDING") // JobStatus
+  attempts   Int     @default(0)
+  lastError  String?
+  runAt      DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
